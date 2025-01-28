@@ -27,3 +27,4 @@ go.work.sum
 pkg
 .idea
 data
+config.yaml

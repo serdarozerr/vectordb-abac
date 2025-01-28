@@ -1,8 +1,0 @@
-App:
-  Name: ABAC-App
-  Version: v0.0.0
-  Port: 8000
-VectorDB:
-  URL: localhost
-  Port: 6334
-  ApiKey: Some-Api-KEY

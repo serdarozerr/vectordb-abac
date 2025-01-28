@@ -1,13 +1,17 @@
-package handler
+package model
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"qdrant-abac/internal/validator"
 )
 
-func Decode[T validator.Validator](w http.ResponseWriter, r *http.Request) (T, error) {
+type Validator interface {
+	Valid(ctx context.Context) (problems map[string]string)
+}
+
+func Decode[T Validator](w http.ResponseWriter, r *http.Request) (T, error) {
 	var v T
 	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 		return v, fmt.Errorf("decode body: %w", err)

@@ -8,7 +8,8 @@ import (
 	"net/http"
 	"os"
 	"qdrant-abac/config"
-	"qdrant-abac/internal/db"
+	"qdrant-abac/internal/instance"
+	"qdrant-abac/internal/service"
 	"strconv"
 	"sync"
 	"time"
@@ -36,12 +37,19 @@ func run(ctx context.Context, conf *config.Config) error {
 	// Configure logger
 	l := log.New(os.Stdout, "", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
-	// based on the configuration create db instance
-	qdrant := &db.QdrantService{}
-	qdrant.NewClient(conf)
+	// based on the configuration create repository instance
+	r, err := instance.NewRepository(conf.VectorDB.Type, conf)
+	if err != nil {
+		return err
+	}
+	//Create services
+	ds := service.NewDBService(r)
+
+	// Create llm model
+	llm := service.NewLLM(conf.LLM.ApiKey)
 
 	// Get the  server handler
-	srv := NewServer(l, conf, qdrant)
+	srv := NewServer(l, conf, ds, llm)
 
 	httpServer := &http.Server{
 		Handler: srv,

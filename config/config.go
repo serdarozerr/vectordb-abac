@@ -30,10 +30,19 @@ type Config struct {
 		Port    int    `yaml:"Port"`
 	} `yaml:"App"`
 	VectorDB struct {
+		Type   string `yaml:"Type"`
 		URL    string `yaml:"URL"`
 		Port   int    `yaml:"Port"`
 		ApiKey string `yaml:"ApiKey"`
 	} `yaml:"VectorDB"`
+
+	LLM struct {
+		Type            string `yaml:"Type"`
+		ApiKey          string `yaml:"ApiKey"`
+		EmbeddingModel  string `yaml:"EmbeddingModel"`
+		CompletionModel string `yaml:"CompletionModel"`
+		VectorDimension int    `yaml:"VectorDimension"`
+	} `yaml:"LLM"`
 }
 
 type GetEnvValue interface {
