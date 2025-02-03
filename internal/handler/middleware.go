@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"github.com/serdarozerr/vectordb-abac/internal/repository"
 	"log"
 	"net/http"
-	"qdrant-abac/internal/repository"
 )
 
 // it is gonna take some common dependencies and gonna return handler

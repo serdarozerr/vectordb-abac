@@ -3,8 +3,8 @@ package instance
 import (
 	"errors"
 	"github.com/qdrant/go-client/qdrant"
-	"qdrant-abac/config"
-	"qdrant-abac/internal/repository"
+	"github.com/serdarozerr/vectordb-abac/config"
+	"github.com/serdarozerr/vectordb-abac/internal/repository"
 )
 
 func NewRepository(dbType string, cfg *config.Config) (repository.VectorRepository, error) {

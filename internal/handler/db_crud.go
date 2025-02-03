@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"github.com/serdarozerr/vectordb-abac/config"
+	"github.com/serdarozerr/vectordb-abac/internal/model"
+	"github.com/serdarozerr/vectordb-abac/internal/service"
 	"log"
 	"net/http"
-	"qdrant-abac/config"
-	"qdrant-abac/internal/model"
-	"qdrant-abac/internal/service"
 )
 
 func CreateCollection(ds service.DBServicer, logger *log.Logger, config *config.Config) http.Handler {
@@ -65,10 +65,23 @@ func InsertFileToVectorDB(ds service.DBServicer, logger *log.Logger, llm *servic
 
 }
 
-//curl -X POST \
-//-H "Content-type: application/json" \
-//-H "Accept: application/json" \
-//-d '{"name":"testcollection"}' \
-//"http://localhost:8000/api/v1/collection/create"
+func QueryCollection(ds service.DBServicer, logger *log.Logger, llm *service.LLM, config *config.Config) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data, err := model.Decode[model.VectorDBQuery](w, r)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
 
-//curl -X POST -F "file=@test.txt" -F "CollectionName=testcollection"  http://localhost:8000/api/v1/collection/insert
+		res, err := ds.QueryCollection(r.Context(), logger, llm, data, config.LLM.VectorDimension)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(res))
+
+	})
+}

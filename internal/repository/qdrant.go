@@ -9,6 +9,8 @@ type QdrantRepository struct {
 	Client *qdrant.Client
 }
 
+type newUint64 uint64
+
 func (q *QdrantRepository) CreateCollection(ctx context.Context, name string, vd int) error {
 	request := &qdrant.CreateCollection{
 		CollectionName: name,
@@ -52,7 +54,22 @@ func (q *QdrantRepository) Upsert(ctx context.Context, collectionName string, in
 func (q *QdrantRepository) DeleteCollection() {
 }
 
-func (q *QdrantRepository) Query() {
+func (q *QdrantRepository) Query(ctx context.Context, collectionName string, query []float32) (string, error) {
+	var limit uint64 = 2
+	var limit_ptr = &limit
+
+	qp := &qdrant.QueryPoints{CollectionName: collectionName, Query: qdrant.NewQuery(query...), Limit: limit_ptr, WithPayload: qdrant.NewWithPayload(true)}
+
+	result, err := q.Client.Query(ctx, qp)
+	if err != nil {
+		return "", err
+	}
+	var similar string = ""
+
+	for _, point := range result {
+		similar += point.Payload["text"].GetStringValue()
+	}
+	return similar, nil
 
 }
 

@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"github.com/serdarozerr/vectordb-abac/internal/model"
 	"log"
-	"qdrant-abac/internal/model"
 )
 
 type Creator interface {
@@ -23,7 +23,7 @@ type Deleter interface {
 }
 
 type MakeQuery interface {
-	Query(logger *log.Logger) error
+	QueryCollection(ctx context.Context, logger *log.Logger, llm *LLM, data model.VectorDBQuery, vd int) (string, error)
 }
 
 type DBServicer interface {

@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
+	"github.com/serdarozerr/vectordb-abac/internal/model"
+	"github.com/serdarozerr/vectordb-abac/internal/repository"
 	"log"
-	"qdrant-abac/internal/model"
-	"qdrant-abac/internal/repository"
 )
 
 type DBService struct {
@@ -75,9 +75,30 @@ func (ds *DBService) DeleteCollection(logger *log.Logger) error {
 	return nil
 }
 
-func (ds *DBService) Query(logger *log.Logger) error {
+func (ds *DBService) QueryCollection(ctx context.Context, logger *log.Logger, llm *LLM, data model.VectorDBQuery, vd int) (string, error) {
 	// Business logic to here
-	logger.Println("Query collection")
-	ds.Repository.Query()
-	return nil
+
+	query := make([]string, 1)
+	query[0] = data.Query
+
+	emb, err := llm.EmbedText(ctx, query)
+	if err != nil {
+		return "", err
+	}
+
+	vector32 := make([]float32, vd)
+	for _, e := range emb {
+		for i, v := range e.Embedding {
+			vector32[i] = float32(v)
+		}
+	}
+
+	s, err := ds.Repository.Query(ctx, data.CollectionName, vector32)
+
+	res, err := llm.CompleteText(ctx, s)
+
+	if err != nil {
+		return "", err
+	}
+	return res, nil
 }

@@ -5,6 +5,7 @@ import (
 	"regexp"
 )
 
+// VectorDBCreate create vector db collection with given name
 type VectorDBCreate struct {
 	Name string `json:"name"`
 }
@@ -21,7 +22,27 @@ func (qc VectorDBCreate) Valid(ctx context.Context) map[string]string {
 	return problems
 }
 
+// VectorDBInsert params for the inserting the text from giving file
 type VectorDBInsert struct {
 	CollectionName string
 	Text           string
+}
+
+// VectorDBQuery params for the Querying vector DB
+type VectorDBQuery struct {
+	CollectionName string
+	Query          string
+}
+
+func (qc VectorDBQuery) Valid(ctx context.Context) map[string]string {
+	problems := make(map[string]string)
+
+	if qc.Query == "" {
+		problems[qc.Query] = "The query is empty"
+	}
+	if qc.CollectionName == "" {
+		problems[qc.Query] = "The collection  name is empty"
+	}
+	return problems
+
 }

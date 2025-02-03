@@ -20,7 +20,7 @@ type Deleter interface {
 }
 
 type QueryMaker interface {
-	Query()
+	Query(ctx context.Context, collectionName string, query []float32) (string, error)
 }
 
 type VectorRepository interface {
