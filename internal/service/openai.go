@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/openai/openai-go"
 )
 import "github.com/openai/openai-go/option"
@@ -28,6 +29,8 @@ You are a helpful AI assistant specialized in answering questions and providing 
 You always provide structured, accurate, and concise responses.
 `
 
+var userPrompt = "When generating a response, you must incorporate the provided data while leveraging your internal knowledge. Ensure the response seamlessly integrates both sources for accuracy and relevance. The data provided is as follows:\n\n%s\"\n\n"
+
 func NewLLM(key string) *LLM {
 	client := openai.NewClient(option.WithAPIKey(key))
 	llm := &LLM{client: client}
@@ -47,8 +50,10 @@ func (l *LLM) EmbedText(ctx context.Context, text openai.EmbeddingNewParamsInput
 }
 
 func (l *LLM) CompleteText(ctx context.Context, userText string) (string, error) {
-	model := openai.F(openai.ChatModelGPT4o)
 
+	userPrompt = fmt.Sprintf(userPrompt, userText)
+
+	model := openai.F(openai.ChatModelGPT4o)
 	messages := openai.F([]openai.ChatCompletionMessageParamUnion{
 		openai.ChatCompletionSystemMessageParam{
 			Role: openai.F(openai.ChatCompletionSystemMessageParamRoleSystem),
@@ -59,7 +64,7 @@ func (l *LLM) CompleteText(ctx context.Context, userText string) (string, error)
 			Role: openai.F(openai.ChatCompletionUserMessageParamRoleUser),
 			Content: openai.F([]openai.ChatCompletionContentPartUnionParam{
 				openai.ChatCompletionContentPartTextParam{
-					Text: openai.F(userText),
+					Text: openai.F(userPrompt),
 					Type: openai.F(openai.ChatCompletionContentPartTextTypeText)}})}},
 	)
 
