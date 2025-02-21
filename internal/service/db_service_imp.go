@@ -64,7 +64,7 @@ func (ds *DBService) Insert(ctx context.Context, logger *log.Logger, llm *LLM, d
 func (ds *DBService) UpdateCollection(logger *log.Logger) error {
 	// Business logic to here
 	logger.Println("Update collection")
-	ds.Repository.UpdateCollection()
+	//ds.Repository.UpdateCollection()
 	return nil
 }
 

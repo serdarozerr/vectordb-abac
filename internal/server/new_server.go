@@ -3,12 +3,13 @@ package server
 import (
 	"github.com/serdarozerr/vectordb-abac/config"
 	"github.com/serdarozerr/vectordb-abac/internal/handler"
+	"github.com/serdarozerr/vectordb-abac/internal/repository"
 	"github.com/serdarozerr/vectordb-abac/internal/service"
 	"log"
 	"net/http"
 )
 
-func addRoutes(
+func addRoutesCollection(
 	mux *http.ServeMux,
 	logger *log.Logger,
 	ds service.DBServicer,
@@ -23,17 +24,24 @@ func addRoutes(
 
 }
 
+func addRoutesAuth(mux *http.ServeMux, config *config.Config, logger *log.Logger, c repository.Cache) {
+	mux.Handle("/api/v1/auth/token", handler.ConvertCodeToToken(config, logger))
+	mux.Handle("/api/v1/auth/token-decode", handler.DecodeToken(config, logger, c))
+}
+
 func NewServer(
 	logger *log.Logger,
 	config *config.Config,
 	ds service.DBServicer,
 	llm *service.LLM,
+	c repository.Cache,
 ) http.Handler {
 
 	mux := http.NewServeMux()
 
-	// TODO add the middlewares/handlers at here
-	addRoutes(mux, logger, ds, llm, config)
+	// add the middlewares/handlers at here
+	addRoutesCollection(mux, logger, ds, llm, config)
+	addRoutesAuth(mux, config, logger, c)
 
 	return mux
 

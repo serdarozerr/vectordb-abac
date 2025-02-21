@@ -43,6 +43,20 @@ type Config struct {
 		CompletionModel string `yaml:"CompletionModel"`
 		VectorDimension int    `yaml:"VectorDimension"`
 	} `yaml:"LLM"`
+	Auth struct {
+		ClientID     string `yaml:"ClientID"`
+		ClientSecret string `yaml:"ClientSecret"`
+		RedirectURI  string `yaml:"RedirectURI"`
+		GrantType    string `yaml:"GrantType"`
+		TokenURL     string `yaml:"TokenURL"`
+	} `yaml:"Auth"`
+
+	Redis struct {
+		URL      string `yaml:"URL"`
+		Port     string `yaml:"Port"`
+		Password string `yaml:"Password"`
+		DB       int    `yaml:"DB"`
+	} `yaml:"Redis"`
 }
 
 type GetEnvValue interface {

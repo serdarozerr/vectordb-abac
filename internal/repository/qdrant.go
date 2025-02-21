@@ -73,6 +73,10 @@ func (q *QdrantRepository) Query(ctx context.Context, collectionName string, que
 
 }
 
-func (q *QdrantRepository) UpdateCollection() {
+func (q *QdrantRepository) UpdateCollection(ctx context.Context, collectionName string, indexes []uint64, vectors [][]float32) error {
 
+	//u := &qdrant.SetPayloadPoints{}
+
+	//q.Client.UpdateCollection(ctx, u)
+	return nil
 }

@@ -49,8 +49,14 @@ func run(ctx context.Context, conf *config.Config) error {
 	// Create llm model
 	llm := service.NewLLM(conf.LLM.ApiKey)
 
+	// Init Cache Repo.
+	c, err := instance.NewMemeDbInstance(conf, "redis")
+	if err != nil {
+		return err
+	}
+
 	// Get the  server handler
-	srv := server.NewServer(l, conf, ds, llm)
+	srv := server.NewServer(l, conf, ds, llm, c)
 
 	httpServer := &http.Server{
 		Handler: srv,

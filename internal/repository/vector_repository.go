@@ -12,7 +12,7 @@ type Upserter interface {
 	Upsert(ctx context.Context, collectionName string, indexes []uint64, vectors [][]float32, texts []string) error
 }
 type Updater interface {
-	UpdateCollection()
+	UpdateCollection(ctx context.Context, collectionName string, indexes []uint64, vectors [][]float32) error
 }
 
 type Deleter interface {

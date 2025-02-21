@@ -16,7 +16,7 @@ func (qc VectorDBCreate) Valid(ctx context.Context) map[string]string {
 	reg.MatchString(qc.Name)
 	problems := make(map[string]string)
 	if !reg.MatchString(qc.Name) {
-		problems[qc.Name] = "includes non letter characters"
+		problems[qc.Name] = "Includes non letter characters"
 	}
 
 	return problems
@@ -41,7 +41,7 @@ func (qc VectorDBQuery) Valid(ctx context.Context) map[string]string {
 		problems[qc.Query] = "The query is empty"
 	}
 	if qc.CollectionName == "" {
-		problems[qc.Query] = "The collection  name is empty"
+		problems[qc.Query] = "The collection name is empty"
 	}
 	return problems
 
