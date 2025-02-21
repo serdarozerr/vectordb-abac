@@ -31,8 +31,8 @@ type OnlyAccessToken struct {
 	AccessToken string
 }
 
-// getToken, Make HTTP request to provide to get tokens
-func getToken(code string, conf *config.Config) (Token, error) {
+// token, Make HTTP request to provide to get tokens
+func token(code string, conf *config.Config) (Token, error) {
 	data := url.Values{}
 	data.Set("code", code)
 	data.Set("grant_type", conf.Auth.GrantType)
@@ -53,32 +53,43 @@ func getToken(code string, conf *config.Config) (Token, error) {
 	if err != nil {
 		return Token{}, err
 	}
-	var token Token
 
-	err = json.Unmarshal(body, &token)
+	var t Token
+	err = json.Unmarshal(body, &t)
 	if err != nil {
 		return Token{}, err
 	}
-	return token, nil
+	return t, nil
 
 }
 
-// RefreshTheToken , used to get new access token with refresh token,
+// RefreshToken , used to get new access token with refresh token,
 // if refresh expired return 401 to login again
-func RefreshTheToken(token Token, conf *config.Config) error {
+func RefreshToken(token Token, conf *config.Config) error {
 	return nil
 }
 
 // TokenFromCode , get the access and refresh token using authorization code.
-// Return the access token and save the refresh toke to the redis db
-func TokenFromCode(conf *config.Config, code string) (OnlyAccessToken, error) {
-	token, err := getToken(code, conf)
+// Return the access token and save the refresh toke to the cache
+func TokenFromCode(ctx context.Context, conf *config.Config, c repository.Cache, code string) (OnlyAccessToken, error) {
+	t, err := token(code, conf)
+
 	if err != nil {
 		return OnlyAccessToken{}, err
 	}
-	// save refresh token to the Redis
+
+	claims, err := DecodeToken(ctx, c, t.AccessToken)
+	if err != nil {
+		return OnlyAccessToken{}, err
+	}
+	// save refresh token to the cache
+	err = c.Set(ctx, makeKey(claims["email"].(string), "_rk"), t.RefreshToken, ExpPk)
+	if err != nil {
+		return OnlyAccessToken{}, err
+	}
+
 	return OnlyAccessToken{
-		AccessToken: token.AccessToken,
+		AccessToken: t.AccessToken,
 	}, nil
 
 }
@@ -135,7 +146,7 @@ func keyFunc(ctx context.Context, c repository.Cache) jwt.Keyfunc {
 		email := claims["email"].(string)
 
 		// Check PK exist in Cache if not  then fetch from keycloak
-		pkByte, err := c.Get(ctx, email)
+		pkByte, err := c.Get(ctx, makeKey(email, "_pk"))
 		if err != nil {
 			// fetch pk from the identity provider
 			pk, err := fetchPK(token)
@@ -149,7 +160,7 @@ func keyFunc(ctx context.Context, c repository.Cache) jwt.Keyfunc {
 			}
 
 			//set into cache
-			err = c.Set(ctx, email, jpk, ExpPk)
+			err = c.Set(ctx, makeKey(email, "_pk"), jpk, ExpPk)
 			if err != nil {
 				return nil, err
 			}
@@ -167,30 +178,38 @@ func keyFunc(ctx context.Context, c repository.Cache) jwt.Keyfunc {
 }
 
 // Function to decode and verify a Keycloak token
-func DecodeToken(ctx context.Context, c repository.Cache, tokenString string) (bool, error) {
+func DecodeToken(ctx context.Context, c repository.Cache, tokenString string) (map[string]interface{}, error) {
 
 	// Parse and validate the token
-	token, err := jwt.Parse(tokenString, keyFunc(ctx, c))
+	t, err := jwt.Parse(tokenString, keyFunc(ctx, c))
 	if err != nil {
-		return false, fmt.Errorf("invalid token: %v", err)
+		return nil, fmt.Errorf("invalid token: %v", err)
 	}
 
 	// Check if the token is valid
-	if !token.Valid {
-		return false, fmt.Errorf("token is not valid")
+	if !t.Valid {
+		return nil, fmt.Errorf("token is not valid")
 	}
 
 	// Extract claims
-	claims, ok := token.Claims.(jwt.MapClaims)
+	claims, ok := t.Claims.(jwt.MapClaims)
 	if !ok {
-		return false, fmt.Errorf("failed to extract claims")
+		return nil, fmt.Errorf("failed to extract claims")
 	}
 
 	// Validate `iss` (issuer)
 	if claims["iss"] != KeycloakIssuer {
-		return false, fmt.Errorf("invalid issuer: %s", claims["iss"])
+		return nil, fmt.Errorf("invalid issuer: %s", claims["iss"])
 	}
 
-	// Token is valid
-	return token.Valid, nil
+	return claims, nil
+}
+
+func makeKey(k1 string, ks ...string) string {
+
+	extra := ""
+	for _, k := range ks {
+		extra += k
+	}
+	return k1 + extra
 }

@@ -25,7 +25,7 @@ func addRoutesCollection(
 }
 
 func addRoutesAuth(mux *http.ServeMux, config *config.Config, logger *log.Logger, c repository.Cache) {
-	mux.Handle("/api/v1/auth/token", handler.ConvertCodeToToken(config, logger))
+	mux.Handle("/api/v1/auth/token", handler.ConvertCodeToToken(config, logger, c))
 	mux.Handle("/api/v1/auth/token-decode", handler.DecodeToken(config, logger, c))
 }
 
