@@ -20,7 +20,7 @@ func ConvertCodeToToken(conf *config.Config, logger *log.Logger, c repository.Ca
 
 		}
 
-		token, err := auth.TokenFromCode(r.Context(), conf, c, data.Code)
+		token, err := auth.TokenFromAuthCode(r.Context(), conf, c, data.Code)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
@@ -46,7 +46,7 @@ func DecodeToken(conf *config.Config, logger *log.Logger, c repository.Cache) ht
 			w.Write([]byte(err.Error()))
 			return
 		}
-		claims, err := auth.DecodeToken(r.Context(), c, data.AccessToken)
+		claims, err := auth.DecodeToken(r.Context(), conf, c, data.AccessToken)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))

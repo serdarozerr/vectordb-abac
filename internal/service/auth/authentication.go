@@ -12,14 +12,16 @@ import (
 	"github.com/serdarozerr/vectordb-abac/internal/repository"
 	"io"
 	"net/http"
-	"net/url"
 	"time"
 )
 
 const (
-	ExpPk           = time.Minute * 10 //expire in 10 min.
-	KeycloakIssuer  = "http://localhost:8080/realms/qdrant-go-realm"
-	KeycloakJWKSURL = KeycloakIssuer + "/protocol/openid-connect/certs"
+	ExpAT            = time.Minute * 10 //set based on Identity Provider expire Access Token
+	ExpRT            = time.Hour * 24   // set based on Identity Provider expire Refresh Token
+	ExpPk            = time.Minute * 10 //set based on Identity Provider expire Public Key
+	KeycloakIssuer   = "http://localhost:8080/realms/qdrant-go-realm"
+	KeycloakJWKSURL  = KeycloakIssuer + "/protocol/openid-connect/certs"
+	KeycloakTokenURL = KeycloakIssuer + "/protocol/openid-connect/token"
 )
 
 type Token struct {
@@ -31,15 +33,11 @@ type OnlyAccessToken struct {
 	AccessToken string
 }
 
-// token, Make HTTP request to provide to get tokens
+// token, Make HTTP request to get both tokens
 func token(code string, conf *config.Config) (Token, error) {
-	data := url.Values{}
-	data.Set("code", code)
-	data.Set("grant_type", conf.Auth.GrantType)
-	data.Set("redirect_uri", conf.Auth.RedirectURI)
-	data.Set("client_id", conf.Auth.ClientID)
-	data.Set("client_secret", conf.Auth.ClientSecret)
-	resp, err := http.PostForm(conf.Auth.TokenURL, data)
+	d := Director{builder: NewBuilder()}
+	data := d.BuildAuthCodeData(conf, code, "authorization_code")
+	resp, err := http.PostForm(KeycloakTokenURL, *data)
 	if err != nil {
 		return Token{}, err
 	}
@@ -63,27 +61,49 @@ func token(code string, conf *config.Config) (Token, error) {
 
 }
 
-// RefreshToken , used to get new access token with refresh token,
+// NewAccessToken , used to get new access token with refresh token,
 // if refresh expired return 401 to login again
-func RefreshToken(token Token, conf *config.Config) error {
-	return nil
+func NewAccessToken(ctx context.Context, conf *config.Config, refreshToken string) (OnlyAccessToken, error) {
+	d := Director{builder: NewBuilder()}
+	data := d.BuildAuthCodeData(conf, refreshToken, "refresh_token")
+	resp, err := http.PostForm(KeycloakTokenURL, *data)
+	if err != nil {
+		return OnlyAccessToken{}, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return OnlyAccessToken{}, errors.New(resp.Status)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return OnlyAccessToken{}, err
+	}
+
+	var t OnlyAccessToken
+	err = json.Unmarshal(body, &t)
+	if err != nil {
+		return OnlyAccessToken{}, err
+	}
+	return t, nil
 }
 
-// TokenFromCode , get the access and refresh token using authorization code.
+// TokenFromAuthCode , get the access and refresh token using authorization code.
 // Return the access token and save the refresh toke to the cache
-func TokenFromCode(ctx context.Context, conf *config.Config, c repository.Cache, code string) (OnlyAccessToken, error) {
+func TokenFromAuthCode(ctx context.Context, conf *config.Config, c repository.Cache, code string) (OnlyAccessToken, error) {
 	t, err := token(code, conf)
 
 	if err != nil {
 		return OnlyAccessToken{}, err
 	}
 
-	claims, err := DecodeToken(ctx, c, t.AccessToken)
+	claims, err := DecodeToken(ctx, conf, c, t.AccessToken)
 	if err != nil {
 		return OnlyAccessToken{}, err
 	}
 	// save refresh token to the cache
-	err = c.Set(ctx, makeKey(claims["email"].(string), "_rk"), t.RefreshToken, ExpPk)
+	err = c.Set(ctx, makeKey(claims["email"].(string), "_rk"), t.RefreshToken, ExpRT)
 	if err != nil {
 		return OnlyAccessToken{}, err
 	}
@@ -177,13 +197,25 @@ func keyFunc(ctx context.Context, c repository.Cache) jwt.Keyfunc {
 	}
 }
 
-// Function to decode and verify a Keycloak token
-func DecodeToken(ctx context.Context, c repository.Cache, tokenString string) (map[string]interface{}, error) {
+// DecodeToken, decode and returns claims of token
+func DecodeToken(ctx context.Context, conf *config.Config, c repository.Cache, tokenString string) (map[string]interface{}, error) {
 
 	// Parse and validate the token
 	t, err := jwt.Parse(tokenString, keyFunc(ctx, c))
+
+	//we assume toke is expired, get new token with refresh token
 	if err != nil {
-		return nil, fmt.Errorf("invalid token: %v", err)
+		claims := t.Claims.(jwt.MapClaims)
+		email := claims["email"].(string)
+		rk, err := c.Get(ctx, makeKey(email, "_rk"))
+		if err != nil {
+			return nil, fmt.Errorf("Login again your session is ended: %v", err)
+		}
+		at, err := NewAccessToken(ctx, conf, rk.(string))
+		if err != nil {
+			return nil, err
+		}
+		return DecodeToken(ctx, conf, c, at.AccessToken)
 	}
 
 	// Check if the token is valid
