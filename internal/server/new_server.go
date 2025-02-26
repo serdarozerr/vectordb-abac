@@ -15,12 +15,15 @@ func addRoutesCollection(
 	ds service.DBServicer,
 	llm *service.LLM,
 	config *config.Config,
+	c repository.Cache,
+
 ) {
 
 	lm := handler.LoggerMiddleware(logger)
-	mux.Handle("/api/v1/collection/create", lm(handler.CreateCollection(ds, logger, config)))
-	mux.Handle("/api/v1/collection/insert", lm(handler.InsertFileToVectorDB(ds, logger, llm, config)))
-	mux.Handle("/api/v1/collection/query", lm(handler.QueryCollection(ds, logger, llm, config)))
+	am := handler.AuthenticationMiddleware(logger, config, c)
+	mux.Handle("/api/v1/collection/create", am(lm(handler.CreateCollection(ds, logger, config))))
+	mux.Handle("/api/v1/collection/insert", am(lm(handler.InsertFileToVectorDB(ds, logger, llm, config))))
+	mux.Handle("/api/v1/collection/query", am(lm(handler.QueryCollection(ds, logger, llm, config))))
 
 }
 
@@ -40,7 +43,7 @@ func NewServer(
 	mux := http.NewServeMux()
 
 	// add the middlewares/handlers at here
-	addRoutesCollection(mux, logger, ds, llm, config)
+	addRoutesCollection(mux, logger, ds, llm, config, c)
 	addRoutesAuth(mux, config, logger, c)
 
 	return mux

@@ -26,6 +26,8 @@ func (b *Builder) Build() *url.Values {
 	return b.values
 }
 
+// BuildAuthCodeData, is used for building the url data for sending request to the keycloak. The attributes
+// set based on the get access & refresh token from keycloak
 func (d *Director) BuildAuthCodeData(conf *config.Config, code string, grantType string) *url.Values {
 	d.builder.
 		SetAttribute("code", code).
@@ -38,6 +40,7 @@ func (d *Director) BuildAuthCodeData(conf *config.Config, code string, grantType
 	return data
 }
 
+// BuildRefreshTokenData, is used to building get new access token with refresh token.
 func (d *Director) BuildRefreshTokenData(conf *config.Config, refresh_token string, grantType string) *url.Values {
 	d.builder.
 		SetAttribute("refresh_token", refresh_token).

@@ -29,3 +29,5 @@ pkg
 data
 config.yaml
 vectordb_data
+redis_data
+postgres_data

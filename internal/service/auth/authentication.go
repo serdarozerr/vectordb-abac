@@ -65,7 +65,7 @@ func token(code string, conf *config.Config) (Token, error) {
 // if refresh expired return 401 to login again
 func NewAccessToken(ctx context.Context, conf *config.Config, refreshToken string) (OnlyAccessToken, error) {
 	d := Director{builder: NewBuilder()}
-	data := d.BuildAuthCodeData(conf, refreshToken, "refresh_token")
+	data := d.BuildRefreshTokenData(conf, refreshToken, "refresh_token")
 	resp, err := http.PostForm(KeycloakTokenURL, *data)
 	if err != nil {
 		return OnlyAccessToken{}, err
@@ -81,12 +81,12 @@ func NewAccessToken(ctx context.Context, conf *config.Config, refreshToken strin
 		return OnlyAccessToken{}, err
 	}
 
-	var t OnlyAccessToken
+	var t Token
 	err = json.Unmarshal(body, &t)
 	if err != nil {
 		return OnlyAccessToken{}, err
 	}
-	return t, nil
+	return OnlyAccessToken{AccessToken: t.AccessToken}, nil
 }
 
 // TokenFromAuthCode , get the access and refresh token using authorization code.
@@ -152,7 +152,7 @@ func fetchPK(token *jwt.Token) (interface{}, error) {
 	return nil, fmt.Errorf("kid not found in token header")
 }
 
-// parseToken, is higher order function cache public key. If not exist in cache it fetches from IP.
+// keyFunc, is higher order function cache public key. If not exist in cache it fetches from IP.
 // Returns jwt.Keyfunc function type which is an argument type expected by the jwt.Parse function
 func keyFunc(ctx context.Context, c repository.Cache) jwt.Keyfunc {
 	return func(token *jwt.Token) (interface{}, error) {
@@ -237,6 +237,7 @@ func DecodeToken(ctx context.Context, conf *config.Config, c repository.Cache, t
 	return claims, nil
 }
 
+// makeKey, build new key from given set of stings
 func makeKey(k1 string, ks ...string) string {
 
 	extra := ""

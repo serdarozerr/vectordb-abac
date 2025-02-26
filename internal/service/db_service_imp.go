@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"github.com/serdarozerr/vectordb-abac/internal/model"
 	"github.com/serdarozerr/vectordb-abac/internal/repository"
 	"log"
@@ -17,9 +18,20 @@ func NewDBService(r repository.VectorRepository) DBServicer {
 }
 
 func (ds *DBService) CreateCollection(ctx context.Context, logger *log.Logger, data model.VectorDBCreate, vd int) error {
-	// Business logic to here
 
-	err := ds.Repository.CreateCollection(ctx, data.Name, vd)
+	claims, ok := ValueFromContext[map[string]interface{}](ctx, "claims")
+	if !ok {
+		return errors.New("Clould not retrieve claims from context")
+	}
+
+	roles, err := RolesFromClaims(claims)
+	if err != nil {
+		return err
+	}
+
+	println(roles)
+
+	err = ds.Repository.CreateCollection(ctx, data.Name, vd)
 	if err != nil {
 		return err
 	}
